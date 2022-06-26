@@ -1,20 +1,22 @@
-# Python to Linux Web App on Azure
-# Build your Python project and deploy it to Azure as a Linux Web App.
-# Change python version to one thats appropriate for your application.
-# https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
+
+
+# Starter pipeline    
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
 trigger:
-- main
+- master
+
+# TODO: Replace the agent pool name
+pool: Azure Pipelines
 
 variables:
-  # Azure Resource Manager connection created during pipeline creation
-  azureServiceConnectionId: 'd9123e65-ae73-4c09-89ad-823518d1bd50'
-
-  # Web app name
+  # TODO: Replace the service connection name
+  azureServiceConnectionId: 'myfirstconnection'
+  
+  # TODO: Replace 'mywebapp193576' with the existing Web App name
   webAppName: 'tonywebapp01'
-
-  # Agent VM image name
-  vmImageName: 'ubuntu-latest'
 
   # Environment name
   environmentName: 'tonywebapp01'
@@ -22,30 +24,25 @@ variables:
   # Project root folder. Point to the folder containing manage.py file.
   projectRoot: $(System.DefaultWorkingDirectory)
 
-  # Python version: 3.7
-  pythonVersion: '3.7'
-
 stages:
 - stage: Build
   displayName: Build stage
   jobs:
   - job: BuildJob
-    pool:
-      vmImage: $(vmImageName)
-    steps:
-    - task: UsePythonVersion@0
-      inputs:
-        versionSpec: '$(pythonVersion)'
-      displayName: 'Use Python $(pythonVersion)'
+    pool: Azure Pipelines
+    steps:    
+    - script: |
+        python3.7 -m pip install --upgrade pip
+        python3.7 -m pip install setup
+        python3.7 -m pip install -r requirements.txt
+      workingDirectory: $(projectRoot)
 
     - script: |
-        python -m venv antenv
-        source antenv/bin/activate
-        python -m pip install --upgrade pip
-        pip install setup
-        pip install -r requirements.txt
+        export PATH=$HOME/.local/bin:$PATH
+        make install
+        make lint
       workingDirectory: $(projectRoot)
-      displayName: "Install requirements"
+      displayName: 'Run lint tests'
 
     - task: ArchiveFiles@2
       displayName: 'Archive files'
@@ -66,21 +63,14 @@ stages:
   condition: succeeded()
   jobs:
   - deployment: DeploymentJob
-    pool:
-      vmImage: $(vmImageName)
+    pool: Azure Pipelines
     environment: $(environmentName)
     strategy:
       runOnce:
         deploy:
           steps:
-
-          - task: UsePythonVersion@0
-            inputs:
-              versionSpec: '$(pythonVersion)'
-            displayName: 'Use Python version'
-
           - task: AzureWebApp@1
-            displayName: 'Deploy Azure Web App : tonywebapp01'
+            displayName: 'Deploy Azure Web App : flask-ml-service'
             inputs:
               azureSubscription: $(azureServiceConnectionId)
               appName: $(webAppName)
